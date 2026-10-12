@@ -28,14 +28,19 @@ export async function browserScan(input, options = {}) {
       await context.route("**/*", async (route) => {
         const req = route.request();
         const url = req.url();
+        requests++;
+        if (requests > 120 || signal.aborted) {
+          blocked++;
+          await route.abort().catch(() => {});
+          return;
+        }
         seen.push({
-          url: url.split("?")[0],
+          url: url.split("?")[0].slice(0, 2048),
           method: req.method(),
           type: req.resourceType(),
         });
         if (
           !["GET", "HEAD"].includes(req.method()) ||
-          ++requests > 120 ||
           totalBytes > 15000000 ||
           signal.aborted
         ) {
